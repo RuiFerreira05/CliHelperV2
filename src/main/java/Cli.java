@@ -9,11 +9,15 @@ import java.util.*;
 public class Cli {
 
     private final Deque<Menu> backStack = new ArrayDeque<>();
-
     private final Map<Class<? extends Menu>, Menu> objectHistory = new HashMap<>();
-    private boolean menuHistoryEnabled = true;
+    private final List<Throwable> errorHistory = new ArrayList<>();
+    private boolean lastCommandErrored = false;
 
     private final Scanner scanner = new Scanner(System.in);
+    private boolean menuHistoryEnabled = true;
+    private boolean debugEnabled = false;
+    private boolean printErrorsEnabled = true;
+    private boolean errorHistoryEnabled = false;
 
     public boolean active = false;
     private Menu currentMenu;
@@ -28,12 +32,16 @@ public class Cli {
         active = true;
         while (active) {
             if (currentMenu == null) {
-                System.err.println("Something went wrong and current menu is null. Exiting");
+                if (debugEnabled) {
+                    System.err.println("Something went wrong and current menu is null. Exiting");
+                }
                 return;
             }
 
             if (!isValidMenu(currentMenu)) {
-                System.out.println("Current Menu does not meet Menu requirements. Exiting");
+                if (debugEnabled) {
+                    System.err.println("Current Menu does not meet Menu requirements. Exiting");
+                }
                 return;
             }
 
@@ -97,13 +105,15 @@ public class Cli {
         System.out.println();
 
         // Execute chosen option
+        lastCommandErrored = false;
+
         try {
             options[inputParsed-1].invoke(currentMenu);
         } catch (IllegalAccessException e) {
             // Should not happen because of setAccessible(true)
             throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
-            System.err.println("Menu option " + inputParsed + " threw an exception: " + e);
+            registerError(e, "Menu option " + inputParsed + " threw an exception: " + e);
         }
 
         System.out.println();
@@ -149,7 +159,7 @@ public class Cli {
                 // Should not happen because of setAccessible(true)
                 throw new RuntimeException(e);
             } catch (InvocationTargetException e) {
-                System.err.println("Header \"" + header.getName() + "\" threw an exception: " + e);
+                registerError(e, "Header \"" + header.getName() + "\" threw an exception: " + e);
             }
         }
     }
@@ -171,6 +181,16 @@ public class Cli {
         }
     }
 
+    private void registerError(Throwable e, String message) {
+        lastCommandErrored = true;
+        if (printErrorsEnabled) {
+            System.err.println(message);
+        }
+        if (errorHistoryEnabled) {
+            errorHistory.add(e);
+        }
+    }
+
     void display(String str) {
         System.out.println(str);
     }
@@ -184,8 +204,7 @@ public class Cli {
                 newMenu = menu.getDeclaredConstructor().newInstance();
                 newMenu.setCli(this);
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                System.err.println("Attempted to move current menu to illegal class: " + menu.getSimpleName());
-                System.err.println("Error: " + e);
+                registerError(e, "Attempted to move current menu (\"" + menu.getSimpleName() + "\") to illegal class");
                 return;
             }
         }
@@ -222,8 +241,31 @@ public class Cli {
         active = false;
     }
 
-    Cli setMenuHistory(boolean enabled) {
+    Cli menuHistory(boolean enabled) {
         this.menuHistoryEnabled = enabled;
         return this;
+    }
+
+    Cli debug(boolean enabled) {
+        this.debugEnabled = enabled;
+        return this;
+    }
+
+    Cli printErrors(boolean enabled) {
+        this.printErrorsEnabled = enabled;
+        return this;
+    }
+
+    Cli errorHistory(boolean enabled) {
+        this.errorHistoryEnabled = enabled;
+        return this;
+    }
+
+    boolean isLastCommandErrored() {
+        return lastCommandErrored;
+    }
+
+    List<Throwable> getErrorHistory() {
+        return errorHistory;
     }
 }

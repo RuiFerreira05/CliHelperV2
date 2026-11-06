@@ -1,11 +1,11 @@
+import java.util.List;
+
 public class Menu {
 
     private Cli cli;
 
     protected void display(String str) {
         cli.display(str);
-        System.out.println();
-        System.out.printf("");
     }
 
     protected void displayf(String str, Object... objects) {
@@ -26,5 +26,14 @@ public class Menu {
 
     public void setCli(Cli cli) {
         this.cli = cli;
+    }
+
+    // Context
+    protected boolean lastCommandErrored() {
+        return cli.isLastCommandErrored();
+    }
+
+    protected List<Throwable> errorHistory() {
+        return cli.getErrorHistory();
     }
 }

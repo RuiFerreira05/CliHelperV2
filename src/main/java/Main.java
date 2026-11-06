@@ -3,7 +3,7 @@ import annotations.MenuConfig;
 import annotations.MenuOption;
 
 void main() {
-    Cli cli = new Cli(MainMenu.class).setMenuHistory(false);
+    Cli cli = new Cli(MainMenu.class).menuHistory(false);
 
     cli.start();
 }
