@@ -9,14 +9,20 @@ import java.util.*;
 public class Cli {
 
     private final Deque<Menu> backStack = new ArrayDeque<>();
+
+    private final Map<Class<? extends Menu>, Menu> objectHistory = new HashMap<>();
+    private boolean menuHistoryEnabled = true;
+
     private final Scanner scanner = new Scanner(System.in);
-    public int maxTitleLength = 40;
+
     public boolean active = false;
     private Menu currentMenu;
 
     Cli(Class<? extends Menu> startingMenu) {
         moveTo(startingMenu);
     }
+
+    Cli(Menu startingMenu) {moveTo(startingMenu);}
 
     void start() {
         active = true;
@@ -57,13 +63,19 @@ public class Cli {
         MenuConfig menuConfig = menuClass.getAnnotation(MenuConfig.class);
 
         // Display title
-        displayTitle(menuClass.getSimpleName(), maxTitleLength, menuConfig);
+        displayTitle(menuClass.getSimpleName(), menuConfig);
+
+        System.out.println();
 
         // Display headers
         displayHeaders(currentMenu, menuClass);
 
+        System.out.println();
+
         // Display and get options
         Method[] options = getAndListOptions(menuClass);
+
+        System.out.println();
 
         // Collect user input
         System.out.print(menuConfig.prompt().trim() + " ");
@@ -82,6 +94,8 @@ public class Cli {
             return;
         }
 
+        System.out.println();
+
         // Execute chosen option
         try {
             options[inputParsed-1].invoke(currentMenu);
@@ -89,8 +103,10 @@ public class Cli {
             // Should not happen because of setAccessible(true)
             throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
-            System.err.println("Menu option " + inputParsed + " threw an exception: " + e.getMessage());
+            System.err.println("Menu option " + inputParsed + " threw an exception: " + e);
         }
+
+        System.out.println();
     }
 
     private Method[] getAndListOptions(Class<? extends Menu> menuClass) {
@@ -119,7 +135,11 @@ public class Cli {
 
             // Title
             if (annotation.showTitle()) {
-                System.out.println(parseHeaderName(header));
+                String title = annotation.title();
+                if (title.isBlank()) {
+                    title = Utils.parseCamelCase(header.getName(), true) + ":";
+                }
+                System.out.println(title);
             }
 
             // Execute
@@ -134,34 +154,12 @@ public class Cli {
         }
     }
 
-    private static void displayTitle(String classTitle, int maxLength, MenuConfig menuConfig) {
-        if (maxLength <= 0) {
-            throw new IllegalArgumentException("maxLength must be greater than 0");
+    private static void displayTitle(String classTitle, MenuConfig menuConfig) {
+        String title = menuConfig.title();
+        if (title.isBlank()) {
+            title = Utils.parseCamelCase(classTitle).toUpperCase();
         }
-
-        String rawTitle = (menuConfig != null && menuConfig.title() != null && !menuConfig.title().isBlank())
-                ? menuConfig.title()
-                : Utils.parseCamelCase(classTitle);
-
-        int margin = (maxLength / 5);
-        int maxTitleLength = Math.max(1, maxLength - (margin * 2));
-        int indentSpaces = (maxLength - maxTitleLength) / 2;
-
-        StringBuilder wrapped = new StringBuilder();
-        for (int i = 0; i < rawTitle.length(); i += maxTitleLength) {
-            if (i > 0) {
-                wrapped.append(System.lineSeparator());
-            }
-            wrapped.append(rawTitle, i, Math.min(i + maxTitleLength, rawTitle.length()));
-        }
-
-        String formattedTitle = new StringBuilder()
-                .repeat('=', maxLength).append(System.lineSeparator())
-                .append(wrapped.toString().indent(indentSpaces))
-                .repeat('=', maxLength)
-                .toString();
-
-        System.out.println(formattedTitle);
+        System.out.println(title);
     }
 
     private String parseOptionName(Method option) {
@@ -173,28 +171,23 @@ public class Cli {
         }
     }
 
-    private String parseHeaderName(Method header) {
-        Header headerAnn = header.getAnnotation(Header.class);
-        if (headerAnn.title().isBlank()) {
-            return Utils.parseCamelCase(header.getName(), false);
-        } else {
-            return headerAnn.title();
-        }
-    }
-
     void display(String str) {
         System.out.println(str);
     }
 
     void moveTo(Class<? extends Menu> menu) {
         Menu newMenu;
-        try {
-            newMenu = menu.getDeclaredConstructor().newInstance();
-            newMenu.setCli(this);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            System.err.println("Attempted to move current menu to illegal class: " + menu.getSimpleName());
-            System.err.println("Error: " + e);
-            return;
+        if (menuHistoryEnabled && objectHistory.containsKey(menu)) {
+            newMenu = objectHistory.get(menu);
+        } else {
+            try {
+                newMenu = menu.getDeclaredConstructor().newInstance();
+                newMenu.setCli(this);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                System.err.println("Attempted to move current menu to illegal class: " + menu.getSimpleName());
+                System.err.println("Error: " + e);
+                return;
+            }
         }
         if (currentMenu != null) {
             backStack.push(currentMenu);
@@ -202,14 +195,35 @@ public class Cli {
         currentMenu = newMenu;
     }
 
-    void moveBack() {
+    void moveTo(Menu menu) {
+        if (currentMenu != null) {
+            backStack.push(currentMenu);
+        }
+        // Might be redundant, but is necessary for completely new classes
+        menu.setCli(this);
+        currentMenu = menu;
+    }
+
+    void moveBack(boolean destroy) {
         if (backStack.isEmpty()) {
             return;
+        }
+        if (!destroy) {
+            objectHistory.put(currentMenu.getClass(), currentMenu);
         }
         currentMenu = backStack.pop();
     }
 
+    void moveBack() {
+        moveBack(false);
+    }
+
     void stop() {
         active = false;
+    }
+
+    Cli setMenuHistory(boolean enabled) {
+        this.menuHistoryEnabled = enabled;
+        return this;
     }
 }

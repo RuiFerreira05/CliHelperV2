@@ -4,6 +4,12 @@ public class Menu {
 
     protected void display(String str) {
         cli.display(str);
+        System.out.println();
+        System.out.printf("");
+    }
+
+    protected void displayf(String str, Object... objects) {
+        cli.display(String.format(str, objects));
     }
 
     protected void moveTo(Class<? extends Menu> menu) {

@@ -3,16 +3,18 @@ import annotations.MenuConfig;
 import annotations.MenuOption;
 
 void main() {
-    Cli cli = new Cli(MainMenu.class);
+    Cli cli = new Cli(MainMenu.class).setMenuHistory(false);
 
     cli.start();
 }
 
 @MenuConfig(
 //        title = "Super Duper Main Class",
-        prompt = "$"
+//        prompt = "$"
 )
 static class MainMenu extends Menu {
+
+    private final TestClass testClass = new TestClass();
 
     @Header(
             showTitle = true
@@ -21,9 +23,19 @@ static class MainMenu extends Menu {
         display("Welcome to the Main Menu");
     }
 
+    @Header
+    private void counter() {
+        displayf("Counter is at %d", testClass.counter);
+    }
+
     @MenuOption
     private void sayHello() {
         display("Hello World");
+    }
+
+    @MenuOption
+    private void incrementCounter() {
+        testClass.counter++;
     }
 
     @MenuOption(name="Go to menu 2")
@@ -39,12 +51,23 @@ static class MainMenu extends Menu {
     }
 }
 
+static class TestClass {
+    public int counter = 0;
+}
+
 @MenuConfig
 static class Menu2 extends Menu {
 
+    private int counter = 0;
+
     @Header
-    void description() {
-        display("Welcome to Menu 2");
+    void counter() {
+        displayf("Counter at %d", counter);
+    }
+
+    @MenuOption
+    private void incrementCounter(){
+        counter++;
     }
 
     @MenuOption
