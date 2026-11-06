@@ -22,11 +22,15 @@ public class Cli {
     public boolean active = false;
     private Menu currentMenu;
 
+    // Constructors
+
     Cli(Class<? extends Menu> startingMenu) {
         moveTo(startingMenu);
     }
 
     Cli(Menu startingMenu) {moveTo(startingMenu);}
+
+    // Actions
 
     void start() {
         active = true;
@@ -40,7 +44,7 @@ public class Cli {
 
             if (!isValidMenu(currentMenu)) {
                 if (debugEnabled) {
-                    System.err.println("Current Menu does not meet Menu requirements. Exiting");
+                    System.err.println("Current Menu does not meet menu requirements. Exiting");
                 }
                 return;
             }
@@ -48,6 +52,58 @@ public class Cli {
             DisplayMenu(currentMenu);
         }
     }
+
+    void display(String str) {
+        System.out.println(str);
+    }
+
+    void moveTo(Class<? extends Menu> menu) {
+        Menu newMenu;
+        if (menuHistoryEnabled && objectHistory.containsKey(menu)) {
+            newMenu = objectHistory.get(menu);
+        } else {
+            try {
+                newMenu = menu.getDeclaredConstructor().newInstance();
+                newMenu.setCli(this);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                registerError(e.getCause(), "Attempted to move current menu (\"" + menu.getSimpleName() + "\") to illegal class");
+                return;
+            }
+        }
+        if (currentMenu != null) {
+            backStack.push(currentMenu);
+        }
+        currentMenu = newMenu;
+    }
+
+    void moveTo(Menu menu) {
+        if (currentMenu != null) {
+            backStack.push(currentMenu);
+        }
+        // Might be redundant, but is necessary for completely new classes
+        menu.setCli(this);
+        currentMenu = menu;
+    }
+
+    void moveBack(boolean destroy) {
+        if (backStack.isEmpty()) {
+            return;
+        }
+        if (!destroy) {
+            objectHistory.put(currentMenu.getClass(), currentMenu);
+        }
+        currentMenu = backStack.pop();
+    }
+
+    void moveBack() {
+        moveBack(false);
+    }
+
+    void stop() {
+        active = false;
+    }
+
+    // Private helper methods
 
     private boolean isValidMenu(Menu currentMenu) {
         Class<? extends Menu> menuClass = currentMenu.getClass();
@@ -73,12 +129,8 @@ public class Cli {
         // Display title
         displayTitle(menuClass.getSimpleName(), menuConfig);
 
-        System.out.println();
-
         // Display headers
         displayHeaders(currentMenu, menuClass);
-
-        System.out.println();
 
         // Display and get options
         Method[] options = getAndListOptions(menuClass);
@@ -107,13 +159,17 @@ public class Cli {
         // Execute chosen option
         lastCommandErrored = false;
 
+        Method chosenMethod = options[inputParsed-1];
         try {
-            options[inputParsed-1].invoke(currentMenu);
+            chosenMethod.invoke(currentMenu);
         } catch (IllegalAccessException e) {
             // Should not happen because of setAccessible(true)
             throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
-            registerError(e, "Menu option " + inputParsed + " threw an exception: " + e);
+            if (chosenMethod.getAnnotation(MenuOption.class).throwErrors()) {
+                throw new RuntimeException(e);
+            }
+            registerError(e.getCause(), "Menu option n " + inputParsed + " threw an exception: " + e.getCause());
         }
 
         System.out.println();
@@ -159,7 +215,7 @@ public class Cli {
                 // Should not happen because of setAccessible(true)
                 throw new RuntimeException(e);
             } catch (InvocationTargetException e) {
-                registerError(e, "Header \"" + header.getName() + "\" threw an exception: " + e);
+                registerError(e.getCause(), "Header \"" + header.getName() + "\" threw an exception: " + e.getCause());
             }
         }
     }
@@ -170,6 +226,7 @@ public class Cli {
             title = Utils.parseCamelCase(classTitle).toUpperCase();
         }
         System.out.println(title);
+        System.out.println();
     }
 
     private String parseOptionName(Method option) {
@@ -191,55 +248,7 @@ public class Cli {
         }
     }
 
-    void display(String str) {
-        System.out.println(str);
-    }
-
-    void moveTo(Class<? extends Menu> menu) {
-        Menu newMenu;
-        if (menuHistoryEnabled && objectHistory.containsKey(menu)) {
-            newMenu = objectHistory.get(menu);
-        } else {
-            try {
-                newMenu = menu.getDeclaredConstructor().newInstance();
-                newMenu.setCli(this);
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                registerError(e, "Attempted to move current menu (\"" + menu.getSimpleName() + "\") to illegal class");
-                return;
-            }
-        }
-        if (currentMenu != null) {
-            backStack.push(currentMenu);
-        }
-        currentMenu = newMenu;
-    }
-
-    void moveTo(Menu menu) {
-        if (currentMenu != null) {
-            backStack.push(currentMenu);
-        }
-        // Might be redundant, but is necessary for completely new classes
-        menu.setCli(this);
-        currentMenu = menu;
-    }
-
-    void moveBack(boolean destroy) {
-        if (backStack.isEmpty()) {
-            return;
-        }
-        if (!destroy) {
-            objectHistory.put(currentMenu.getClass(), currentMenu);
-        }
-        currentMenu = backStack.pop();
-    }
-
-    void moveBack() {
-        moveBack(false);
-    }
-
-    void stop() {
-        active = false;
-    }
+    // Config
 
     Cli menuHistory(boolean enabled) {
         this.menuHistoryEnabled = enabled;
@@ -260,6 +269,8 @@ public class Cli {
         this.errorHistoryEnabled = enabled;
         return this;
     }
+
+    // Getters/Setters
 
     boolean isLastCommandErrored() {
         return lastCommandErrored;

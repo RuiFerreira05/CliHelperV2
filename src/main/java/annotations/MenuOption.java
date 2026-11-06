@@ -9,4 +9,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface MenuOption {
     String name() default "";
+    boolean throwErrors() default false;
 }
