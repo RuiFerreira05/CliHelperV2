@@ -204,7 +204,7 @@ public class Cli {
             // Title
             if (annotation.showTitle()) {
                 String title = annotation.title();
-                if (title.isBlank()) {
+                if (title.isEmpty()) {
                     title = Utils.parseCamelCase(header.getName(), true) + ":";
                 }
                 System.out.println(title);
