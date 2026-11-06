@@ -1,4 +1,4 @@
-package annotations;
+package com.serverofglass.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface MenuOption {
-    String name() default "";
-    boolean throwErrors() default false;
+public @interface Header {
+    String title() default "";
+    boolean showTitle() default false;
 }

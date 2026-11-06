@@ -1,3 +1,5 @@
+package com.serverofglass;
+
 public class Utils {
     public static String parseCamelCase(String camelCase, boolean lowerCaseTheRest) {
         String camelCaseSeparated = camelCase

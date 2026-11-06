@@ -1,6 +1,8 @@
-import annotations.Header;
-import annotations.MenuConfig;
-import annotations.MenuOption;
+package com.serverofglass;
+
+import com.serverofglass.annotations.Header;
+import com.serverofglass.annotations.MenuConfig;
+import com.serverofglass.annotations.MenuOption;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -44,7 +46,7 @@ public class Cli {
 
             if (!isValidMenu(currentMenu)) {
                 if (debugEnabled) {
-                    System.err.println("Current Menu does not meet menu requirements. Exiting");
+                    System.err.println("Current com.serverofglass.Menu does not meet menu requirements. Exiting");
                 }
                 return;
             }
@@ -169,7 +171,7 @@ public class Cli {
             if (chosenMethod.getAnnotation(MenuOption.class).throwErrors()) {
                 throw new RuntimeException(e);
             }
-            registerError(e.getCause(), "Menu option n " + inputParsed + " threw an exception: " + e.getCause());
+            registerError(e.getCause(), "com.serverofglass.Menu option n " + inputParsed + " threw an exception: " + e.getCause());
         }
 
         System.out.println();
@@ -222,7 +224,7 @@ public class Cli {
 
     private static void displayTitle(String classTitle, MenuConfig menuConfig) {
         String title = menuConfig.title();
-        if (title.isBlank()) {
+        if (title.isEmpty()) {
             title = Utils.parseCamelCase(classTitle).toUpperCase();
         }
         System.out.println(title);
@@ -231,7 +233,7 @@ public class Cli {
 
     private String parseOptionName(Method option) {
         MenuOption optAnn = option.getAnnotation(MenuOption.class);
-        if (optAnn.name().isBlank()) {
+        if (optAnn.name().isEmpty()) {
             return Utils.parseCamelCase(option.getName(), true);
         } else {
             return optAnn.name();

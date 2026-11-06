@@ -1,14 +1,18 @@
+package com.serverofglass;
+
+import com.serverofglass.annotations.MenuConfig;
+
 import java.util.List;
 
 /**
- * Menu representation.
+ * com.serverofglass.Menu representation.
  * <p>
- * Must be extended and annotated with {@link annotations.MenuConfig MenuConfig} to implement a menu in the CLI.
+ * Must be extended and annotated with {@link MenuConfig MenuConfig} to implement a menu in the CLI.
  * <p>
  * In {@link Cli}, this class serves as the main reference to the implemented Menus.
  *
  * @see Cli
- * @see annotations.MenuConfig
+ * @see MenuConfig
  */
 public class Menu {
 
