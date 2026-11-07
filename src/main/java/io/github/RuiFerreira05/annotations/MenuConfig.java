@@ -1,4 +1,4 @@
-package com.serverofglass.annotations;
+package io.github.RuiFerreira05.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

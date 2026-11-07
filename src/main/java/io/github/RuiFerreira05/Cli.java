@@ -1,8 +1,8 @@
-package com.serverofglass;
+package io.github.RuiFerreira05;
 
-import com.serverofglass.annotations.Header;
-import com.serverofglass.annotations.MenuConfig;
-import com.serverofglass.annotations.Option;
+import io.github.RuiFerreira05.annotations.Header;
+import io.github.RuiFerreira05.annotations.MenuConfig;
+import io.github.RuiFerreira05.annotations.Option;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

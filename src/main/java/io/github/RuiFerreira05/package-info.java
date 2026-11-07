@@ -9,4 +9,4 @@
  * @version 1.0
  * @see <a href="https://github.com/RuiFerreira05/CliHelperV2">GitHub</a>
  */
-package com.serverofglass;
+package io.github.RuiFerreira05;

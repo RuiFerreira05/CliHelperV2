@@ -1,6 +1,6 @@
-package com.serverofglass;
+package io.github.RuiFerreira05;
 
-import com.serverofglass.annotations.MenuConfig;
+import io.github.RuiFerreira05.annotations.MenuConfig;
 
 import java.util.List;
 

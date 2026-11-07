@@ -1,4 +1,4 @@
-package com.serverofglass;
+package io.github.RuiFerreira05;
 
 public class Utils {
     public static String parseCamelCase(String camelCase, boolean lowerCaseTheRest) {
