@@ -9,4 +9,4 @@
  * @version 1.0
  * @see <a href="https://github.com/RuiFerreira05/CliHelperV2">GitHub</a>
  */
-package io.github.RuiFerreira05;
+package io.github.ruiferreira05;

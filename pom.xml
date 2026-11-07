@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>io.github.RuiFerreira05</groupId>
+    <groupId>io.github.ruiferreira05</groupId>
     <artifactId>CliHelperV2</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
@@ -23,6 +23,7 @@
         <developer>
             <name>Rui Ferreira</name>
             <email>ruimf.05@gmail.com</email>
+            <organization>RuiFerreira05</organization>
             <organizationUrl>https://github.com/RuiFerreira05</organizationUrl>
         </developer>
     </developers>
@@ -77,11 +78,8 @@
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>3.2.8</version>
                         <configuration>
-                            <keyname>EA745292AA66450B81D981A2B7910E23D130A8F9</keyname>
-                            <gpgArguments>
-                                <arg>--pinentry-mode</arg>
-                                <arg>loopback</arg>
-                            </gpgArguments>
+                            <!--suppress UnresolvedMavenProperty -->
+                            <keyname>${gpg.keyname}</keyname>
                         </configuration>
                         <executions>
                             <execution>
@@ -108,5 +106,4 @@
             </build>
         </profile>
     </profiles>
-
 </project>

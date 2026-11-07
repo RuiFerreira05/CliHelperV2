@@ -1,6 +1,6 @@
-package io.github.RuiFerreira05;
+package io.github.ruiferreira05;
 
-import io.github.RuiFerreira05.annotations.MenuConfig;
+import io.github.ruiferreira05.annotations.MenuConfig;
 
 import java.util.List;
 

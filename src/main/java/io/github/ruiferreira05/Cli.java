@@ -1,8 +1,8 @@
-package io.github.RuiFerreira05;
+package io.github.ruiferreira05;
 
-import io.github.RuiFerreira05.annotations.Header;
-import io.github.RuiFerreira05.annotations.MenuConfig;
-import io.github.RuiFerreira05.annotations.Option;
+import io.github.ruiferreira05.annotations.Header;
+import io.github.ruiferreira05.annotations.MenuConfig;
+import io.github.ruiferreira05.annotations.Option;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

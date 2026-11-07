@@ -1,4 +1,4 @@
-package io.github.RuiFerreira05;
+package io.github.ruiferreira05;
 
 public class Utils {
     public static String parseCamelCase(String camelCase, boolean lowerCaseTheRest) {
