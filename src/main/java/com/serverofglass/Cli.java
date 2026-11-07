@@ -2,17 +2,31 @@ package com.serverofglass;
 
 import com.serverofglass.annotations.Header;
 import com.serverofglass.annotations.MenuConfig;
-import com.serverofglass.annotations.MenuOption;
+import com.serverofglass.annotations.Option;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 
+/**
+ * The main class of the package, responsible for holding the CLI loop and performing reflection on the menus
+ */
 public class Cli {
 
+    /// The Backstack of the CLI, holds the objects that were previously on screen but moved out of.
     private final Deque<Menu> backStack = new ArrayDeque<>();
-    private final Map<Class<? extends Menu>, Menu> objectHistory = new HashMap<>();
+
+    /// Holds previously instantiated menus, as a way of keeping state without destroying them.
+    /// As it might increase size beyond acceptable it can be turned off with {@link #menuHistory(boolean)}
+    private final Map<Class<? extends Menu>, Menu> menuHistory = new HashMap<>();
+
+    /// Holds all Throwables encountered by the CLI while executing the options declared in the custom menus.
+    /// Is exposed to menus via {@link Menu#errorHistory()}
     private final List<Throwable> errorHistory = new ArrayList<>();
+
+    /// This method serves as a helper to check if the last option executed returned an error,
+    /// works in tandem with {@link #errorHistory}.
+    /// Is exposed to menus via {@link Menu#lastCommandErrored()}
     private boolean lastCommandErrored = false;
 
     private final Scanner scanner = new Scanner(System.in);
@@ -21,19 +35,39 @@ public class Cli {
     private boolean printErrorsEnabled = true;
     private boolean errorHistoryEnabled = false;
 
+    /// If true, cli loop is running, can be stopped with {@link Menu#stopCli()} which calls {@link #stop()} internally
     public boolean active = false;
     private Menu currentMenu;
 
     // Constructors
 
+    /**
+     * Instantiate a CLI. Can be started with {@link #start()}.
+     * If
+     *
+     * @param startingMenu A Menu compatible class which will be the first to be displayed.
+     *                     Must extend {@link Menu} and be annotated with {@link MenuConfig}
+     */
     Cli(Class<? extends Menu> startingMenu) {
         moveTo(startingMenu);
     }
 
+    /**
+     * Instantiate a CLI. Can be started with {@link #start()}.
+     * <p>
+     * Using {@link #Cli(Class)} is preferred if {@code startingMenu} contains no custom constructor.
+     *
+     * @param startingMenu An instance of a menu compatible class.
+     *                     Must extend {@link Menu} and be annotated with {@link MenuConfig}
+     */
     Cli(Menu startingMenu) {moveTo(startingMenu);}
 
     // Actions
 
+    /**
+     * Starts the CLI loop. Hangs.
+     * CLI loop can be stopped with {@link #stop()} or {@link Menu#stopCli()} if inside a custom menu
+     */
     void start() {
         active = true;
         while (active) {
@@ -61,8 +95,8 @@ public class Cli {
 
     void moveTo(Class<? extends Menu> menu) {
         Menu newMenu;
-        if (menuHistoryEnabled && objectHistory.containsKey(menu)) {
-            newMenu = objectHistory.get(menu);
+        if (menuHistoryEnabled && menuHistory.containsKey(menu)) {
+            newMenu = menuHistory.get(menu);
         } else {
             try {
                 newMenu = menu.getDeclaredConstructor().newInstance();
@@ -92,7 +126,7 @@ public class Cli {
             return;
         }
         if (!destroy) {
-            objectHistory.put(currentMenu.getClass(), currentMenu);
+            menuHistory.put(currentMenu.getClass(), currentMenu);
         }
         currentMenu = backStack.pop();
     }
@@ -114,7 +148,7 @@ public class Cli {
             return false;
         }
 
-        if (Arrays.stream(menuClass.getDeclaredMethods()).noneMatch(method -> method.isAnnotationPresent(MenuOption.class))) {
+        if (Arrays.stream(menuClass.getDeclaredMethods()).noneMatch(method -> method.isAnnotationPresent(Option.class))) {
             return false;
         }
 
@@ -168,7 +202,7 @@ public class Cli {
             // Should not happen because of setAccessible(true)
             throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
-            if (chosenMethod.getAnnotation(MenuOption.class).throwErrors()) {
+            if (chosenMethod.getAnnotation(Option.class).throwErrors()) {
                 throw new RuntimeException(e);
             }
             registerError(e.getCause(), "com.serverofglass.Menu option n " + inputParsed + " threw an exception: " + e.getCause());
@@ -179,7 +213,7 @@ public class Cli {
 
     private Method[] getAndListOptions(Class<? extends Menu> menuClass) {
         Method[] options = Arrays.stream(menuClass.getDeclaredMethods())
-                .filter(method -> method.isAnnotationPresent(MenuOption.class))
+                .filter(method -> method.isAnnotationPresent(Option.class))
                 .toArray(Method[]::new);
         options = Utils.reverseArray(options);
 
@@ -232,7 +266,7 @@ public class Cli {
     }
 
     private String parseOptionName(Method option) {
-        MenuOption optAnn = option.getAnnotation(MenuOption.class);
+        Option optAnn = option.getAnnotation(Option.class);
         if (optAnn.name().isEmpty()) {
             return Utils.parseCamelCase(option.getName(), true);
         } else {
@@ -252,21 +286,57 @@ public class Cli {
 
     // Config
 
+    /**
+     * if {@code true}, enables the menu history functionality, which allows menus popped out of the stack to keep
+     * their state.
+     * <p>
+     * Should not be confused with the backstack.
+     * <p>
+     * Defaults to {@code true}.
+     *
+     * @param enabled if {@code true}, is enabled
+     * @return the same instance of the CLI
+     */
     Cli menuHistory(boolean enabled) {
         this.menuHistoryEnabled = enabled;
         return this;
     }
 
+    /**
+     * if {@code true}, enables debug mode on the menu
+     * <p>
+     * Defaults to {@code false}.
+     *
+     * @param enabled if {@code true}, is enabled
+     * @return the same instance of the CLI
+     */
     Cli debug(boolean enabled) {
         this.debugEnabled = enabled;
         return this;
     }
 
+    /**
+     * if {@code true}, prints a helpful error message to the console, does not throw the error.
+     * <p>
+     * Defaults to {@code true}.
+     *
+     * @param enabled if {@code true}, is enabled
+     * @return the same instance of the CLI
+     */
     Cli printErrors(boolean enabled) {
         this.printErrorsEnabled = enabled;
         return this;
     }
 
+    /**
+     * if {@code true}, enables error history in the CLI which allows checking which errors were thrown by
+     * executing an option. Useful in tandem with {@link #lastCommandErrored}
+     * <p>
+     * Defaults to {@code false}.
+     *
+     * @param enabled if {@code true}, is enabled
+     * @return the same instance of the CLI
+     */
     Cli errorHistory(boolean enabled) {
         this.errorHistoryEnabled = enabled;
         return this;
@@ -274,10 +344,16 @@ public class Cli {
 
     // Getters/Setters
 
+    /**
+     * @return {@code true} if the last command raised an exception, {@code false} otherwise.
+     */
     boolean isLastCommandErrored() {
         return lastCommandErrored;
     }
 
+    /**
+     * @return A list of all errors thrown by the CLI during runtime.
+     */
     List<Throwable> getErrorHistory() {
         return errorHistory;
     }
