@@ -4,6 +4,7 @@ import io.github.ruiferreira05.annotations.Header;
 import io.github.ruiferreira05.annotations.MenuConfig;
 import io.github.ruiferreira05.annotations.Option;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -48,7 +49,7 @@ public class Cli {
      * @param startingMenu A Menu compatible class which will be the first to be displayed.
      *                     Must extend {@link Menu} and be annotated with {@link MenuConfig}
      */
-    Cli(Class<? extends Menu> startingMenu) {
+    public Cli(Class<? extends Menu> startingMenu) {
         moveTo(startingMenu);
     }
 
@@ -68,7 +69,7 @@ public class Cli {
      * Starts the CLI loop. Hangs.
      * CLI loop can be stopped with {@link #stop()} or {@link Menu#stopCli()} if inside a custom menu
      */
-    void start() {
+    public void start() {
         active = true;
         while (active) {
             if (currentMenu == null) {
@@ -89,17 +90,19 @@ public class Cli {
         }
     }
 
-    void display(String str) {
+    public void display(String str) {
         System.out.println(str);
     }
 
-    void moveTo(Class<? extends Menu> menu) {
+    public void moveTo(Class<? extends Menu> menu) {
         Menu newMenu;
         if (menuHistoryEnabled && menuHistory.containsKey(menu)) {
             newMenu = menuHistory.get(menu);
         } else {
             try {
-                newMenu = menu.getDeclaredConstructor().newInstance();
+                Constructor<? extends Menu> cons = menu.getDeclaredConstructor();
+                cons.setAccessible(true);
+                newMenu = cons.newInstance();
                 newMenu.setCli(this);
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
                 registerError(e.getCause(), "Attempted to move current menu (\"" + menu.getSimpleName() + "\") to illegal class");
@@ -112,7 +115,7 @@ public class Cli {
         currentMenu = newMenu;
     }
 
-    void moveTo(Menu menu) {
+    public void moveTo(Menu menu) {
         if (currentMenu != null) {
             backStack.push(currentMenu);
         }
@@ -121,7 +124,7 @@ public class Cli {
         currentMenu = menu;
     }
 
-    void moveBack(boolean destroy) {
+    public void moveBack(boolean destroy) {
         if (backStack.isEmpty()) {
             return;
         }
@@ -131,11 +134,11 @@ public class Cli {
         currentMenu = backStack.pop();
     }
 
-    void moveBack() {
+    public void moveBack() {
         moveBack(false);
     }
 
-    void stop() {
+    public void stop() {
         active = false;
     }
 
@@ -297,7 +300,7 @@ public class Cli {
      * @param enabled if {@code true}, is enabled
      * @return the same instance of the CLI
      */
-    Cli menuHistory(boolean enabled) {
+    public Cli menuHistory(boolean enabled) {
         this.menuHistoryEnabled = enabled;
         return this;
     }
@@ -310,7 +313,7 @@ public class Cli {
      * @param enabled if {@code true}, is enabled
      * @return the same instance of the CLI
      */
-    Cli debug(boolean enabled) {
+    public Cli debug(boolean enabled) {
         this.debugEnabled = enabled;
         return this;
     }
@@ -323,7 +326,7 @@ public class Cli {
      * @param enabled if {@code true}, is enabled
      * @return the same instance of the CLI
      */
-    Cli printErrors(boolean enabled) {
+    public Cli printErrors(boolean enabled) {
         this.printErrorsEnabled = enabled;
         return this;
     }
@@ -337,7 +340,7 @@ public class Cli {
      * @param enabled if {@code true}, is enabled
      * @return the same instance of the CLI
      */
-    Cli errorHistory(boolean enabled) {
+    public Cli errorHistory(boolean enabled) {
         this.errorHistoryEnabled = enabled;
         return this;
     }
@@ -347,14 +350,14 @@ public class Cli {
     /**
      * @return {@code true} if the last command raised an exception, {@code false} otherwise.
      */
-    boolean isLastCommandErrored() {
+    public boolean isLastCommandErrored() {
         return lastCommandErrored;
     }
 
     /**
      * @return A list of all errors thrown by the CLI during runtime.
      */
-    List<Throwable> getErrorHistory() {
+    public List<Throwable> getErrorHistory() {
         return errorHistory;
     }
 }
