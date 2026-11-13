@@ -1,12 +1,15 @@
 package io.github.ruiferreira05;
 
-import io.github.ruiferreira05.annotations.Header;
-import io.github.ruiferreira05.annotations.MenuConfig;
-import io.github.ruiferreira05.annotations.Option;
+import io.github.ruiferreira05.annotations.form.Form;
+import io.github.ruiferreira05.annotations.form.FormProperty;
+import io.github.ruiferreira05.annotations.menu.Header;
+import io.github.ruiferreira05.annotations.menu.MenuConfig;
+import io.github.ruiferreira05.annotations.menu.Option;
+import io.github.ruiferreira05.exceptions.FormCancelledException;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
+import java.security.InvalidParameterException;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -226,6 +229,88 @@ public class Cli {
             System.out.println(i+1 + ". " + parseOptionName(options[i]));
         }
         return options;
+    }
+
+    public <T extends Record> T displayForm(Class<T> form) throws FormCancelledException {
+        if (!form.isAnnotationPresent(Form.class)) {
+            throw new FormCancelledException("Form invalid");
+        }
+
+        Form formConfig = form.getDeclaredAnnotation(Form.class);
+        RecordComponent[] comps = form.getRecordComponents();
+        Class<?>[] paramTypes = Arrays.stream(comps)
+                .map(RecordComponent::getType)
+                .toArray(Class<?>[]::new);
+        ArrayList<Object> params = new ArrayList<>();
+
+        for (int i = 0; i < comps.length; i++) {
+            RecordComponent comp = comps[i];
+            Class<?> formType = comp.getType();
+            paramTypes[i] = formType;
+
+            FormProperty propertyConfig = null;
+            if (comp.isAnnotationPresent(FormProperty.class)) {
+                propertyConfig = comp.getAnnotation(FormProperty.class);
+            }
+
+            String prompt = comp.getName() + ":";
+            if (propertyConfig != null && !propertyConfig.prompt().isEmpty()) {
+                prompt = propertyConfig.prompt().trim();
+            }
+            System.out.print(prompt + " ");
+            String input = scanner.nextLine();
+
+            if (!formConfig.cancelKeyword().isEmpty()) {
+                if (input.equals(formConfig.cancelKeyword())) {
+                    throw new FormCancelledException("Form cancelled by user");
+                }
+            }
+
+            try {
+                Object parsedInput = parseValue(input, formType, propertyConfig);
+                params.add(parsedInput);
+            } catch (Exception e) {
+                System.out.println("Invalid input");
+                i--;
+            }
+        }
+
+        try {
+            Constructor<T> canonicalConst = form.getDeclaredConstructor(paramTypes);
+            canonicalConst.setAccessible(true);
+            return canonicalConst.newInstance(params.toArray(Object[]::new));
+        } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static Object parseValue(String input, Class<?> targetType, FormProperty config) {
+        if (!config.acceptEmpty() && input.isBlank()) {
+            throw new InvalidParameterException("blank input with accept empty false");
+        }
+
+        String trimmed = input.trim();
+
+        // Standard types
+        if (targetType == String.class) {
+            return trimmed;
+        } else if (targetType == int.class || targetType == Integer.class) {
+            return Integer.parseInt(trimmed);
+        } else if (targetType == long.class || targetType == Long.class) {
+            return Long.parseLong(trimmed);
+        } else if (targetType == double.class || targetType == Double.class) {
+            return Double.parseDouble(trimmed);
+        } else if (targetType == boolean.class || targetType == Boolean.class) {
+            return Boolean.parseBoolean(trimmed);
+        } else if (targetType == LocalDate.class) {
+            return LocalDate.parse(trimmed); // Expects YYYY-MM-DD
+        }
+        // Dynamic Enum support
+        else if (targetType.isEnum()) {
+            return Enum.valueOf((Class<Enum>) targetType, trimmed.toUpperCase());
+        }
+
+        throw new UnsupportedOperationException("Unsupported field type: " + targetType.getName());
     }
 
     private void displayHeaders(Menu currentMenu, Class<? extends Menu> menuClass) {

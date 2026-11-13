@@ -1,6 +1,7 @@
 package io.github.ruiferreira05;
 
-import io.github.ruiferreira05.annotations.MenuConfig;
+import io.github.ruiferreira05.annotations.menu.MenuConfig;
+import io.github.ruiferreira05.exceptions.FormCancelledException;
 
 import java.util.List;
 
@@ -46,6 +47,10 @@ public class Menu {
      */
     protected void displayf(String str, Object... objects) {
         cli.display(String.format(str, objects));
+    }
+
+    protected <T extends Record> T displayForm(Class<T> form) throws FormCancelledException {
+        return cli.displayForm(form);
     }
 
     /**
